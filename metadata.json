@@ -1,0 +1,7 @@
+{
+  "name": "CHONTUZ.KG - Sanatorium & Salt Mine",
+  "description": "Official website for Chon-Tuz Sanatorium and Speleotherapy Center. Features booking calculator, seasonal availability checks, and multilingual support.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
