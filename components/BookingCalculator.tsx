@@ -4,7 +4,7 @@ import { RoomCategory, BookingState, Language } from '../types';
 import { ROOMS, TRANSLATIONS } from '../constants';
 import { getDaysDifference, isSeasonOpen } from '../services/seasonService';
 import { formatBookingMessage, sendTelegramDirectly } from '../services/telegramService';
-import { submitBookingToCRM } from '../services/crmService';
+import { submitBookingToCRM, fetchOccupancy, OccupancyData } from '../services/crmService';
 import { AvailabilityCalendar } from './AvailabilityCalendar';
 import { Calculator, Calendar as CalendarIcon, Users, BedDouble, Tag, CheckCircle2, AlertCircle } from 'lucide-react';
 
@@ -30,25 +30,75 @@ export const BookingCalculator: React.FC<Props> = ({ lang }) => {
     comment: ''
   });
 
+  const [occupancy, setOccupancy] = useState<OccupancyData>({});
+  const [dateError, setDateError] = useState<string | null>(null);
+
   const [promoCode, setPromoCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState(0); 
   const [basePrice, setBasePrice] = useState(0);
   const [finalPrice, setFinalPrice] = useState(0);
 
+  // Fetch occupancy data on mount for validation
   useEffect(() => {
-    calculatePrice();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.checkIn, state.checkOut, state.roomType, state.adults, state.extraBeds, appliedDiscount]);
+    fetchOccupancy().then(data => setOccupancy(data));
+  }, []);
 
-  const calculatePrice = () => {
+  useEffect(() => {
+    validateAndCalculate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.checkIn, state.checkOut, state.roomType, state.adults, state.extraBeds, appliedDiscount, occupancy]);
+
+  const validateAndCalculate = () => {
+    setDateError(null);
+
+    // 1. Basic Validation
     if (!state.checkIn || !state.checkOut) {
       setBasePrice(0);
       setFinalPrice(0);
       return;
     }
 
-    const days = getDaysDifference(state.checkIn, state.checkOut);
+    const start = new Date(state.checkIn);
+    const end = new Date(state.checkOut);
+
+    if (start >= end) {
+        setDateError(lang === 'ru' ? 'Дата выезда должна быть позже заезда' : 'Check-out must be after check-in');
+        setBasePrice(0);
+        setFinalPrice(0);
+        return;
+    }
+
+    // 2. Availability Validation
     const room = ROOMS[state.roomType];
+    let isBlocked = false;
+    
+    // Check every day in the range
+    for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const dateKey = `${year}-${month}-${day}`;
+
+        const bookedCount = occupancy[dateKey]?.[state.roomType] || 0;
+        if (room.totalRooms - bookedCount <= 0) {
+            isBlocked = true;
+            break;
+        }
+    }
+
+    if (isBlocked) {
+        setDateError(lang === 'ru' 
+            ? 'На выбранные даты нет свободных мест в этой категории' 
+            : lang === 'kg' 
+            ? 'Тандалган күндөргө бош орун жок' 
+            : 'Selected dates are fully booked for this room type');
+        setBasePrice(0);
+        setFinalPrice(0);
+        return;
+    }
+
+    // 3. Price Calculation
+    const days = getDaysDifference(state.checkIn, state.checkOut);
     let price = 0;
 
     if (room.priceType === 'per_room') {
@@ -77,29 +127,42 @@ export const BookingCalculator: React.FC<Props> = ({ lang }) => {
     }
   };
 
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value.replace(/\D/g, ''); // Remove non-digits
+    if (val.length > 10) val = val.slice(0, 10);
+    
+    // Format: 0XXX XXX XXX
+    if (val.length > 4) {
+        val = val.slice(0, 4) + ' ' + val.slice(4);
+    }
+    if (val.length > 8) {
+         val = val.slice(0, 8) + ' ' + val.slice(8);
+    }
+    
+    setState({ ...state, phone: val });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (dateError) return;
+
     setIsSubmitting(true);
     
     // 1. Prepare formatted Telegram message string
     const message = formatBookingMessage(state, finalPrice, lang);
     
     // 2. Dual Send Strategy:
-    // A. Send Direct to Telegram (Fastest, bypasses Google Script issues)
     sendTelegramDirectly(message);
-    
-    // B. Send to Google Sheets CRM (For record keeping)
-    // We assume success if the CRM call finishes, even if it fails internally, 
-    // because we already sent the telegram message directly.
     await submitBookingToCRM(state, finalPrice, lang, message);
     
-    // We simulate a short delay to ensure UI feedback is pleasant
     setTimeout(() => {
         setIsSubmitting(false);
         setSubmitStatus('success');
         
         // Clear sensitive fields
         setState(prev => ({ ...prev, name: '', phone: '', comment: '' }));
+        setPromoCode('');
+        setAppliedDiscount(0);
         
         // Reset success message
         setTimeout(() => setSubmitStatus('idle'), 5000);
@@ -154,12 +217,21 @@ export const BookingCalculator: React.FC<Props> = ({ lang }) => {
 
       {/* MAIN CONTENT */}
       {submitStatus !== 'success' && (
-          <div className="p-6 lg:p-8 flex-grow overflow-y-auto">
+          <div className="p-6 lg:p-8 flex-grow overflow-y-auto custom-scrollbar">
             
             {/* CALCULATOR TAB */}
             {activeTab === 'calc' && (
                 <div className="animate-in slide-in-from-left-4 fade-in duration-300">
                      <div className="space-y-6">
+                        
+                        {/* Error Banner */}
+                        {dateError && (
+                            <div className="bg-red-50 border border-red-100 text-red-600 p-3 rounded-xl flex items-center gap-2 text-sm font-medium animate-in slide-in-from-top-2">
+                                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                                {dateError}
+                            </div>
+                        )}
+
                         {/* Dates */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
@@ -167,7 +239,8 @@ export const BookingCalculator: React.FC<Props> = ({ lang }) => {
                                 <input
                                     type="date"
                                     required
-                                    className="w-full px-4 py-3 bg-gray-50 border-gray-200 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:bg-white outline-none transition-all font-medium text-gray-800"
+                                    min={new Date().toISOString().split('T')[0]}
+                                    className={`w-full px-4 py-3 bg-gray-50 border rounded-xl focus:ring-2 outline-none transition-all font-medium text-gray-800 ${dateError ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-primary-500 focus:bg-white'}`}
                                     value={state.checkIn}
                                     onChange={(e) => setState({ ...state, checkIn: e.target.value })}
                                 />
@@ -177,7 +250,8 @@ export const BookingCalculator: React.FC<Props> = ({ lang }) => {
                                 <input
                                     type="date"
                                     required
-                                    className="w-full px-4 py-3 bg-gray-50 border-gray-200 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:bg-white outline-none transition-all font-medium text-gray-800"
+                                    min={state.checkIn || new Date().toISOString().split('T')[0]}
+                                    className={`w-full px-4 py-3 bg-gray-50 border rounded-xl focus:ring-2 outline-none transition-all font-medium text-gray-800 ${dateError ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-primary-500 focus:bg-white'}`}
                                     value={state.checkOut}
                                     onChange={(e) => setState({ ...state, checkOut: e.target.value })}
                                 />
@@ -290,10 +364,10 @@ export const BookingCalculator: React.FC<Props> = ({ lang }) => {
                                 <input
                                     type="tel"
                                     required
-                                    placeholder={TRANSLATIONS.form.phone[lang]}
-                                    className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-1 focus:ring-primary-500 outline-none text-sm"
+                                    placeholder="0555 123 456"
+                                    className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-1 focus:ring-primary-500 outline-none text-sm font-medium"
                                     value={state.phone}
-                                    onChange={(e) => setState({...state, phone: e.target.value})}
+                                    onChange={handlePhoneChange}
                                 />
                                  <textarea
                                     rows={2}
@@ -308,9 +382,9 @@ export const BookingCalculator: React.FC<Props> = ({ lang }) => {
                         {/* Submit */}
                         <button
                             onClick={handleSubmit}
-                            disabled={finalPrice === 0 || isSubmitting}
+                            disabled={finalPrice === 0 || isSubmitting || !!dateError}
                             className={`w-full py-4 rounded-xl font-bold text-lg shadow-xl shadow-primary-500/20 transition-all transform hover:scale-[1.02] active:scale-[0.98] ${
-                                finalPrice === 0 
+                                finalPrice === 0 || !!dateError
                                 ? 'bg-slate-200 text-slate-400 cursor-not-allowed' 
                                 : 'bg-gradient-to-r from-primary-600 to-primary-500 text-white hover:to-primary-400'
                             }`}
