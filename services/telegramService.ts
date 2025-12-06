@@ -14,6 +14,7 @@ export const formatBookingMessage = (booking: BookingState, total: number, lang:
 <b>Гости:</b> ${booking.adults} взр, ${booking.children} дет
 <b>Доп. мест:</b> ${booking.extraBeds}
 <b>Сумма:</b> ${total} KGS
+<b>Статус:</b> На брони
 
 <b>Комментарий:</b>
 ${sanitize(booking.comment || 'Нет комментария')}

@@ -22,6 +22,7 @@ export const submitBookingToCRM = async (booking: BookingState, total: number, l
     totalPrice: total,
     language: lang,
     timestamp: new Date().toISOString(),
+    status: 'На брони', // Default status for new web bookings
     source: 'Website - CHONTUZ.KG',
     telegramToken: TELEGRAM_BOT_TOKEN,
     telegramChatId: TELEGRAM_CHAT_ID,

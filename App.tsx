@@ -6,6 +6,7 @@ import { isSeasonOpen } from './services/seasonService';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
 import { BookingCalculator } from './components/BookingCalculator';
 import { RoomList } from './components/RoomList';
+import { AdminPanel } from './components/AdminPanel';
 import { MapPin, Phone, Mail, Mountain, Wind, Heart, Facebook, Instagram, Send, Menu, X, ArrowDown } from 'lucide-react';
 
 function App() {
@@ -296,6 +297,9 @@ function App() {
             </div>
         </div>
       </footer>
+      
+      {/* ADMIN PANEL TRIGGER */}
+      <AdminPanel />
     </div>
   );
 }

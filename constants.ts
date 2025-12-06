@@ -8,7 +8,7 @@ export const SEASON_END_MONTH = 10; // November (0-indexed)
 export const SEASON_END_DAY = 1;
 
 // TELEGRAM CONFIG
-export const TELEGRAM_BOT_TOKEN = '8599456671:AAEoJM0kn41qpxdoOLXm6cdsiAMCiEiPMNw';
+export const TELEGRAM_BOT_TOKEN = '8469524134:AAGuO5TT3SruUJbe-RM5ax_edpd4YRp-H8g';
 export const TELEGRAM_CHAT_ID = '211751883';
 
 // CRM / WEBHOOK CONFIG (Google Sheets, Zoho CRM, Zapier)
@@ -17,6 +17,11 @@ export const TELEGRAM_CHAT_ID = '211751883';
 // 2. Опубликуйте как Web App (доступ: "Anyone")
 // 3. Вставьте полученную ссылку ниже вместо текста в кавычках
 export const CRM_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbw-jiz_RfA2PDvDrdyKjBIjtcN2iFjT8xA32CtqbY52Lao7YwasGkBbZ_YEh8F7baAy/exec';
+
+// ADMIN PANEL CONFIG
+export const ADMIN_PASSWORD = 'admin'; // Change this to secure your panel
+// Сюда вставьте ссылку на саму Google Таблицу (из браузера), чтобы открывать её для редактирования
+export const GOOGLE_SHEET_EDIT_URL = 'https://docs.google.com/spreadsheets/d/1OOOO7uTTSURVPr2NsX8U3SozPYcmkhZF5EOlkIjI4u0/edit?gid=0#gid=0'; 
 
 export const ROOMS: Record<RoomCategory, RoomDetails> = {
   [RoomCategory.LUX]: {
