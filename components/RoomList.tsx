@@ -1,7 +1,9 @@
 
+
+
 import React from 'react';
-import { ROOMS } from '../constants';
-import { Language } from '../types';
+import { ROOMS, TRANSLATIONS } from '../constants';
+import { Language, RoomCategory } from '../types';
 import { User, ArrowRight } from 'lucide-react';
 
 interface Props {
@@ -17,6 +19,8 @@ export const RoomList: React.FC<Props> = ({ lang }) => {
     }
   };
 
+  const t = TRANSLATIONS;
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
       {Object.values(ROOMS).map((room) => (
@@ -29,7 +33,7 @@ export const RoomList: React.FC<Props> = ({ lang }) => {
               className="relative w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" 
             />
             <div className="absolute top-4 right-4 bg-white/95 backdrop-blur shadow-sm px-3 py-1 rounded-full text-xs font-bold text-gray-800">
-                {room.totalRooms} {lang === 'ru' ? 'спальных мест' : lang === 'kg' ? 'орун' : 'sleeping places'}
+                {room.totalRooms} {room.id === RoomCategory.MINE ? t.roomsPage.places[lang] : t.roomsPage.rooms[lang]}
             </div>
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity">
                 <p className="text-white text-xs font-medium truncate">{room.amenities.join(' • ')}</p>
@@ -45,18 +49,18 @@ export const RoomList: React.FC<Props> = ({ lang }) => {
             <div className="flex items-center gap-4 mb-6 text-sm text-gray-500 border-b border-gray-50 pb-4">
                 <div className="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded text-xs font-semibold">
                     <User className="w-3.5 h-3.5" />
-                    Max {room.capacity}
+                    {t.roomsPage.max[lang]} {room.capacity}
                 </div>
             </div>
 
             <div className="mt-auto flex items-end justify-between">
               <div>
-                <span className="block text-xs text-gray-400 font-medium uppercase mb-0.5">Price starts at</span>
+                <span className="block text-xs text-gray-400 font-medium uppercase mb-0.5">{t.roomsPage.priceStart[lang]}</span>
                 <div className="flex items-baseline gap-1">
                     <span className="text-2xl font-bold text-primary-600">
                         {room.price.toLocaleString()}
                     </span>
-                    <span className="text-xs font-bold text-gray-400">KGS</span>
+                    <span className="text-xs font-bold text-gray-400">{t.calculator.som[lang]}</span>
                 </div>
               </div>
               <a 

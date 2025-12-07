@@ -1,4 +1,8 @@
 
+
+
+
+
 import React, { useState, useEffect } from 'react';
 import { RoomCategory, BookingState, Language } from '../types';
 import { ROOMS, TRANSLATIONS } from '../constants';
@@ -27,6 +31,7 @@ export const BookingCalculator: React.FC<Props> = ({ lang }) => {
     extraBeds: 0,
     name: '',
     phone: '',
+    email: '',
     comment: ''
   });
 
@@ -128,18 +133,60 @@ export const BookingCalculator: React.FC<Props> = ({ lang }) => {
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let val = e.target.value.replace(/\D/g, ''); // Remove non-digits
-    if (val.length > 10) val = val.slice(0, 10);
+    const val = e.target.value;
     
-    // Format: 0XXX XXX XXX
-    if (val.length > 4) {
-        val = val.slice(0, 4) + ' ' + val.slice(4);
+    // Allow user to clear input
+    if (!val) {
+        setState({ ...state, phone: '' });
+        return;
     }
-    if (val.length > 8) {
-         val = val.slice(0, 8) + ' ' + val.slice(8);
+
+    // 1. Clean input: keep digits and optional leading plus
+    const hasPlus = val.startsWith('+');
+    const digits = val.replace(/\D/g, '');
+    let formatted = '';
+
+    // RULE 1: RU/KZ (+7)
+    // Matches if user types "7" or "+7"
+    if ((hasPlus && digits.startsWith('7')) || (!hasPlus && digits.startsWith('7') && digits.length > 1)) {
+        formatted = '+7';
+        if (digits.length > 1) formatted += ' (' + digits.substring(1, 4);
+        if (digits.length > 4) formatted += ') ' + digits.substring(4, 7);
+        if (digits.length > 7) formatted += '-' + digits.substring(7, 9);
+        if (digits.length > 9) formatted += '-' + digits.substring(9, 11);
+    } 
+    // RULE 2: KG (+996)
+    // Matches if user types "996" or "+996"
+    else if ((hasPlus && digits.startsWith('996')) || (!hasPlus && digits.startsWith('996'))) {
+        formatted = '+996';
+        if (digits.length > 3) formatted += ' ' + digits.substring(3, 6);
+        if (digits.length > 6) formatted += ' ' + digits.substring(6, 9);
+        if (digits.length > 9) formatted += ' ' + digits.substring(9, 12);
+    }
+    // RULE 3: UZ (+998)
+    else if ((hasPlus && digits.startsWith('998')) || (!hasPlus && digits.startsWith('998'))) {
+        formatted = '+998';
+        if (digits.length > 3) formatted += ' ' + digits.substring(3, 5);
+        if (digits.length > 5) formatted += ' ' + digits.substring(5, 8);
+        if (digits.length > 8) formatted += '-' + digits.substring(8, 10);
+        if (digits.length > 10) formatted += '-' + digits.substring(10, 12);
+    }
+    // RULE 4: Local KG (0xxx) - legacy support
+    else if (digits.startsWith('0')) {
+        formatted = digits.substring(0, 4);
+        if (digits.length > 4) formatted += ' ' + digits.substring(4, 7);
+        if (digits.length > 7) formatted += ' ' + digits.substring(7, 10);
+        if (formatted.length > 12) formatted = formatted.substring(0, 12);
+    }
+    // RULE 5: Generic International
+    else {
+        formatted = (hasPlus ? '+' : '') + digits;
     }
     
-    setState({ ...state, phone: val });
+    // Limit max length to avoid overflow
+    if (formatted.length > 20) return;
+
+    setState({ ...state, phone: formatted });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -160,7 +207,7 @@ export const BookingCalculator: React.FC<Props> = ({ lang }) => {
         setSubmitStatus('success');
         
         // Clear sensitive fields
-        setState(prev => ({ ...prev, name: '', phone: '', comment: '' }));
+        setState(prev => ({ ...prev, name: '', phone: '', email: '', comment: '' }));
         setPromoCode('');
         setAppliedDiscount(0);
         
@@ -210,8 +257,8 @@ export const BookingCalculator: React.FC<Props> = ({ lang }) => {
                   <CheckCircle2 className="w-8 h-8" />
               </div>
               <h3 className="text-xl font-bold text-green-800 mb-2">{TRANSLATIONS.form.success[lang]}</h3>
-              <p className="text-sm text-green-600 mb-6">Manager will confirm your booking via WhatsApp.</p>
-              <button onClick={() => setSubmitStatus('idle')} className="text-green-600 font-medium hover:underline text-sm">Make another booking</button>
+              <p className="text-sm text-green-600 mb-6">{TRANSLATIONS.form.successSub[lang]}</p>
+              <button onClick={() => setSubmitStatus('idle')} className="text-green-600 font-medium hover:underline text-sm">{t.makeAnother[lang]}</button>
           </div>
       )}
 
@@ -346,7 +393,7 @@ export const BookingCalculator: React.FC<Props> = ({ lang }) => {
                                     <div className="text-3xl font-extrabold text-slate-800 leading-none mt-1 tracking-tight">
                                     {finalPrice.toLocaleString()} <span className="text-base font-normal text-slate-500">{t.som[lang]}</span>
                                     </div>
-                                    {appliedDiscount > 0 && <span className="text-xs text-green-600 font-bold">-{appliedDiscount}% discount applied</span>}
+                                    {appliedDiscount > 0 && <span className="text-xs text-green-600 font-bold">-{appliedDiscount}% {t.discountApplied[lang]}</span>}
                                 </div>
                              </div>
 
@@ -364,10 +411,17 @@ export const BookingCalculator: React.FC<Props> = ({ lang }) => {
                                 <input
                                     type="tel"
                                     required
-                                    placeholder="0555 123 456"
+                                    placeholder="+996 555 22-31-88"
                                     className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-1 focus:ring-primary-500 outline-none text-sm font-medium"
                                     value={state.phone}
                                     onChange={handlePhoneChange}
+                                />
+                                <input
+                                    type="email"
+                                    placeholder={TRANSLATIONS.form.email[lang]}
+                                    className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg focus:ring-1 focus:ring-primary-500 outline-none text-sm"
+                                    value={state.email}
+                                    onChange={(e) => setState({...state, email: e.target.value})}
                                 />
                                  <textarea
                                     rows={2}
@@ -389,7 +443,7 @@ export const BookingCalculator: React.FC<Props> = ({ lang }) => {
                                 : 'bg-gradient-to-r from-primary-600 to-primary-500 text-white hover:to-primary-400'
                             }`}
                         >
-                            {isSubmitting ? 'Sending...' : t.bookBtn[lang]}
+                            {isSubmitting ? t.sending[lang] : t.bookBtn[lang]}
                         </button>
                         {submitStatus === 'error' && (
                             <p className="text-red-500 text-xs text-center mt-2 flex items-center justify-center gap-1">
@@ -409,7 +463,7 @@ export const BookingCalculator: React.FC<Props> = ({ lang }) => {
                             onClick={() => setActiveTab('calc')}
                             className="text-primary-600 font-bold hover:underline text-sm"
                         >
-                            Go back to Calculator
+                            {t.backToCalc[lang]}
                         </button>
                     </div>
                 </div>

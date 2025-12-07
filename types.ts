@@ -1,3 +1,4 @@
+
 export type Language = 'ru' | 'kg' | 'en';
 
 export enum RoomCategory {
@@ -29,6 +30,7 @@ export interface BookingState {
   extraBeds: number;
   name: string;
   phone: string;
+  email: string;
   comment: string;
 }
 

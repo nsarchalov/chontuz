@@ -1,7 +1,9 @@
 
+
+
 import React, { useEffect, useState } from 'react';
-import { Language } from '../types';
-import { ROOMS } from '../constants';
+import { Language, RoomCategory } from '../types';
+import { ROOMS, TRANSLATIONS } from '../constants';
 import { fetchOccupancy, OccupancyData } from '../services/crmService';
 import { Loader2, Calendar as CalendarIcon, Info, ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -13,6 +15,8 @@ export const AvailabilityCalendar: React.FC<Props> = ({ lang }) => {
   const [occupancy, setOccupancy] = useState<OccupancyData>({});
   const [loading, setLoading] = useState(true);
   const [viewDate, setViewDate] = useState(new Date());
+
+  const t = TRANSLATIONS.calendar;
 
   useEffect(() => {
     loadData();
@@ -90,7 +94,7 @@ export const AvailabilityCalendar: React.FC<Props> = ({ lang }) => {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-gray-700 font-semibold">
                 <CalendarIcon className="w-5 h-5 text-primary-600" />
-                <span>{lang === 'ru' ? 'Календарь занятости' : lang === 'kg' ? 'Бош орундар' : 'Availability Calendar'}</span>
+                <span>{TRANSLATIONS.calculator.tabs.calendar[lang]}</span>
             </div>
             
             {/* Month Navigation Controls */}
@@ -117,15 +121,15 @@ export const AvailabilityCalendar: React.FC<Props> = ({ lang }) => {
           <div className="flex flex-wrap gap-3 text-xs justify-end">
               <div className="flex items-center gap-1.5 px-2 py-1 bg-white border border-gray-200 rounded-md shadow-sm">
                   <div className="w-3 h-3 bg-emerald-100 border border-emerald-200 rounded-sm"></div> 
-                  <span className="text-gray-600">{lang === 'ru' ? 'Свободно' : lang === 'kg' ? 'Бош' : 'Available'}</span>
+                  <span className="text-gray-600">{t.available[lang]}</span>
               </div>
               <div className="flex items-center gap-1.5 px-2 py-1 bg-white border border-gray-200 rounded-md shadow-sm">
                   <div className="w-3 h-3 bg-amber-100 border border-amber-200 rounded-sm flex items-center justify-center text-[8px] font-bold text-amber-700">!</div> 
-                  <span className="text-gray-600">{lang === 'ru' ? 'Мало мест' : lang === 'kg' ? 'Аз калды' : 'Few left'}</span>
+                  <span className="text-gray-600">{t.few[lang]}</span>
               </div>
               <div className="flex items-center gap-1.5 px-2 py-1 bg-white border border-gray-200 rounded-md shadow-sm">
                   <div className="w-3 h-3 bg-rose-100 border border-rose-200 rounded-sm flex items-center justify-center text-[8px] font-bold text-rose-700">✕</div> 
-                  <span className="text-gray-600">{lang === 'ru' ? 'Занято' : lang === 'kg' ? 'Толук' : 'Full'}</span>
+                  <span className="text-gray-600">{t.full[lang]}</span>
               </div>
           </div>
       </div>
@@ -134,7 +138,7 @@ export const AvailabilityCalendar: React.FC<Props> = ({ lang }) => {
       {loading && (
         <div className="absolute inset-0 bg-white/80 z-20 flex flex-col items-center justify-center min-h-[200px]">
             <Loader2 className="w-8 h-8 text-primary-600 animate-spin mb-2" />
-            <span className="text-sm font-medium text-gray-500">Syncing with CRM...</span>
+            <span className="text-sm font-medium text-gray-500">{t.sync[lang]}</span>
         </div>
       )}
 
@@ -144,7 +148,7 @@ export const AvailabilityCalendar: React.FC<Props> = ({ lang }) => {
             <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-200">
                 <tr>
                     <th scope="col" className="sticky left-0 z-10 bg-gray-50 p-4 border-r border-gray-200 w-48 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                        {lang === 'ru' ? 'Категория' : 'Category'}
+                        {t.cat[lang]}
                     </th>
                     {days.map((d, i) => (
                         <th key={i} scope="col" className={`px-1 py-3 text-center border-r border-gray-100 min-w-[40px] ${[0, 6].includes(d.getDay()) ? 'bg-blue-50/30 text-blue-600' : ''}`}>
@@ -161,7 +165,7 @@ export const AvailabilityCalendar: React.FC<Props> = ({ lang }) => {
                             <div className="flex flex-col">
                                 <span className="text-sm font-bold">{room.title[lang]}</span>
                                 <span className="text-[10px] text-gray-400 font-normal mt-0.5">
-                                    {room.totalRooms} {lang === 'ru' ? 'мест' : lang === 'kg' ? 'орун' : 'places'}
+                                    {room.totalRooms} {room.id === RoomCategory.MINE ? TRANSLATIONS.roomsPage.places[lang] : TRANSLATIONS.roomsPage.rooms[lang]}
                                 </span>
                             </div>
                         </th>
@@ -188,7 +192,7 @@ export const AvailabilityCalendar: React.FC<Props> = ({ lang }) => {
 
       <div className="p-3 bg-gray-50 text-[10px] text-gray-400 text-center flex items-center justify-center gap-1 border-t border-gray-100">
           <Info className="w-3 h-3" />
-          <span>Real-time availability from Google CRM</span>
+          <span>{t.source[lang]}</span>
       </div>
     </div>
   );
